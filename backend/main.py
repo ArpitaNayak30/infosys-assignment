@@ -1,7 +1,13 @@
-from fastapi import FastAPI
+from flask import Flask, jsonify
+from flask_cors import CORS
 
-app = FastAPI()
+app = Flask(__name__)
+CORS(app)  # allow frontend to call backend
 
-@app.get("/")
-def read_root():
-    return {"message": "Hello, FastAPI is running!"}
+@app.route("/")
+def hello():
+    return jsonify( "Hello from Python Backend!")
+
+if __name__ == "__main__":
+    app.run(port=5000, debug=True)
+
