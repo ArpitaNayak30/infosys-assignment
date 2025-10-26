@@ -1,11 +1,36 @@
-import logo from './logo.svg';
+import React, { useState } from 'react';
+import QuestionForm from './components/QuestionForm';
+import Quiz from './components/Quiz';
 import './App.css';
 
 function App() {
-  return (
+  const [questions, setQuestions] = useState([]);
+  const [topic, setTopic] = useState('');
+  const [showQuiz, setShowQuiz] = useState(false);
 
+  const handleQuestionsGenerated = (generatedQuestions, selectedTopic) => {
+    setQuestions(generatedQuestions);
+    setTopic(selectedTopic);
+    setShowQuiz(true);
+  };
+
+  const handleBackToForm = () => {
+    setShowQuiz(false);
+    setQuestions([]);
+    setTopic('');
+  };
+
+  return (
     <div className="App">
-      <h1>hello</h1>
+      {showQuiz ? (
+        <Quiz 
+          questions={questions} 
+          topic={topic} 
+          onBackToForm={handleBackToForm}
+        />
+      ) : (
+        <QuestionForm onQuestionsGenerated={handleQuestionsGenerated} />
+      )}
     </div>
   );
 }

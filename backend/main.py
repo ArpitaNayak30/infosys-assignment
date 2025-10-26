@@ -22,5 +22,5 @@ app.include_router(question_router)
 
 @app.get("/")
 def hello():
-    return {"message": "Question Generator API is running!"}
+    return {"message": "hello"}
 
