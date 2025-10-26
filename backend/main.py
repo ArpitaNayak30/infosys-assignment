@@ -1,13 +1,26 @@
-from flask import Flask, jsonify
-from flask_cors import CORS
 
-app = Flask(__name__)
-CORS(app)  # allow frontend to call backend
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from routes.question_routes import router as question_router
 
-@app.route("/")
+app = FastAPI(
+    title="Question Generator API",
+    description="API for generating educational questions using AI",
+    version="1.0.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
+app.include_router(question_router)
+
+@app.get("/")
 def hello():
-    return jsonify( "Hello from Python Backend!")
-
-if __name__ == "__main__":
-    app.run(port=5000, debug=True)
+    return {"message": "Question Generator API is running!"}
 
