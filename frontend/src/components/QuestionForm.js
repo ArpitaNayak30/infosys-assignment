@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import './QuestionForm.css';
 
 const QuestionForm = ({ onQuestionsGenerated }) => {
@@ -6,6 +7,8 @@ const QuestionForm = ({ onQuestionsGenerated }) => {
   const [numberQuestions, setNumberQuestions] = useState(5);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  const { token } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,6 +31,7 @@ const QuestionForm = ({ onQuestionsGenerated }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           topic: topic.trim(),
