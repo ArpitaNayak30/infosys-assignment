@@ -23,9 +23,9 @@ function App() {
   return (
     <div className="App">
       {showQuiz ? (
-        <Quiz 
-          questions={questions} 
-          topic={topic} 
+        <Quiz
+          questions={questions}
+          topic={topic}
           onBackToForm={handleBackToForm}
         />
       ) : (

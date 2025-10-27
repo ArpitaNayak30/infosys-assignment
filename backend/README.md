@@ -1,13 +1,17 @@
-# Question Generator API
+# Question Generator API with Authentication
 
-A FastAPI-based REST API that generates educational quiz questions using Google's Gemini AI. The API allows users to specify a topic and number of questions, then returns AI-generated multiple-choice questions.
+A FastAPI-based REST API that generates educational quiz questions using Google's Gemini AI with JWT-based user authentication. Users must register and login to access the question generation features.
 
 ## 🚀 Features
 
+- **JWT Authentication**: Secure token-based user authentication
+- **User Management**: Register, login, logout, and profile management
+- **MySQL Database**: Persistent user data storage
 - **AI-Powered Question Generation**: Uses Google Gemini 2.5 Flash model
 - **Customizable Topics**: Generate questions on any subject
 - **Flexible Question Count**: Request 1-20 questions per API call
 - **Multiple Choice Format**: Each question includes 4 answer options
+- **Protected Endpoints**: Question generation requires authentication
 - **Input Validation**: Comprehensive request validation and error handling
 - **CORS Enabled**: Ready for frontend integration
 - **Auto-Generated Documentation**: Interactive API docs with Swagger UI
@@ -15,6 +19,7 @@ A FastAPI-based REST API that generates educational quiz questions using Google'
 ## 📋 Requirements
 
 - Python 3.8+
+- MySQL Server 8.0+
 - Google API Key for Gemini
 - Internet connection for AI model access
 
@@ -39,7 +44,13 @@ A FastAPI-based REST API that generates educational quiz questions using Google'
    GOOGLE_API_KEY=your_google_api_key_here
    ```
 
-4. **Get Google API Key:**
+4. **Set up MySQL Database:**
+   ```bash
+   # Run the database setup script
+   python setup_database.py
+   ```
+
+5. **Get Google API Key:**
    - Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
    - Create a new API key
    - Add it to your `.env` file
@@ -76,13 +87,110 @@ GET /
 **Response:**
 ```json
 {
-  "message": "Question Generator API is running!"
+  "message": "Question Generator API with Authentication is running!"
 }
 ```
 
-#### 2. Generate Questions
+#### 2. User Registration
+```http
+POST /api/auth/register
+```
+
+**Request Body:**
+```json
+{
+  "username": "string",
+  "email": "user@example.com",
+  "password": "string"
+}
+```
+
+**Success Response (201):**
+```json
+{
+  "id": 1,
+  "username": "testuser",
+  "email": "user@example.com",
+  "is_active": true,
+  "created_at": "2024-01-01T12:00:00"
+}
+```
+
+#### 3. User Login
+```http
+POST /api/auth/login
+```
+
+**Request Body:**
+```json
+{
+  "username": "string",
+  "password": "string"
+}
+```
+
+**Success Response (200):**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "user": {
+    "id": 1,
+    "username": "testuser",
+    "email": "user@example.com",
+    "is_active": true,
+    "created_at": "2024-01-01T12:00:00"
+  }
+}
+```
+
+#### 4. User Logout
+```http
+POST /api/auth/logout
+```
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Success Response (200):**
+```json
+{
+  "message": "Successfully logged out"
+}
+```
+
+#### 5. User Profile
+```http
+GET /api/auth/profile
+```
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Success Response (200):**
+```json
+{
+  "id": 1,
+  "username": "testuser",
+  "email": "user@example.com",
+  "is_active": true,
+  "created_at": "2024-01-01T12:00:00"
+}
+```
+
+#### 6. Generate Questions (Protected)
 ```http
 POST /api/generate-questions
+```
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+Content-Type: application/json
 ```
 
 **Request Body:**
@@ -140,6 +248,13 @@ POST /api/generate-questions
   }
   ```
 
+- **401 Unauthorized**: Missing or invalid token
+  ```json
+  {
+    "detail": "Could not validate credentials"
+  }
+  ```
+
 - **500 Internal Server Error**: AI generation or server error
   ```json
   {
@@ -151,33 +266,59 @@ POST /api/generate-questions
 
 ### Using the Test Script
 ```bash
+# Test basic API functionality
 python test_api.py
+
+# Test authentication features
+python test_auth_api.py
 ```
 
 ### Using cURL
-```bash
-# Generate 3 chemistry questions
-curl -X POST http://127.0.0.1:8000/api/generate-questions \
-  -H "Content-Type: application/json" \
-  -d '{"topic": "Chemistry", "number_questions": 3}'
 
-# Generate 5 history questions  
+**1. Register a user:**
+```bash
+curl -X POST http://127.0.0.1:8000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "testuser", "email": "test@example.com", "password": "password123"}'
+```
+
+**2. Login to get token:**
+```bash
+curl -X POST http://127.0.0.1:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "testuser", "password": "password123"}'
+```
+
+**3. Generate questions with token:**
+```bash
 curl -X POST http://127.0.0.1:8000/api/generate-questions \
   -H "Content-Type: application/json" \
-  -d '{"topic": "World History", "number_questions": 5}'
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -d '{"topic": "Chemistry", "number_questions": 3}'
 ```
 
 ### Using Python requests
 ```python
 import requests
 
-url = "http://127.0.0.1:8000/api/generate-questions"
-payload = {
-    "topic": "Physics",
-    "number_questions": 4
+# 1. Register user
+register_data = {
+    "username": "testuser",
+    "email": "test@example.com", 
+    "password": "password123"
 }
+response = requests.post("http://127.0.0.1:8000/api/auth/register", json=register_data)
 
-response = requests.post(url, json=payload)
+# 2. Login to get token
+login_data = {"username": "testuser", "password": "password123"}
+response = requests.post("http://127.0.0.1:8000/api/auth/login", json=login_data)
+token = response.json()["access_token"]
+
+# 3. Generate questions with authentication
+headers = {"Authorization": f"Bearer {token}"}
+payload = {"topic": "Physics", "number_questions": 4}
+response = requests.post("http://127.0.0.1:8000/api/generate-questions", 
+                        json=payload, headers=headers)
 data = response.json()
 
 for i, question in enumerate(data['questions'], 1):
@@ -188,10 +329,34 @@ for i, question in enumerate(data['questions'], 1):
 
 ### Using JavaScript/Fetch
 ```javascript
-const response = await fetch('http://127.0.0.1:8000/api/generate-questions', {
+// 1. Register user
+const registerResponse = await fetch('http://127.0.0.1:8000/api/auth/register', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    username: 'testuser',
+    email: 'test@example.com',
+    password: 'password123'
+  })
+});
+
+// 2. Login to get token
+const loginResponse = await fetch('http://127.0.0.1:8000/api/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    username: 'testuser',
+    password: 'password123'
+  })
+});
+const { access_token } = await loginResponse.json();
+
+// 3. Generate questions with token
+const questionsResponse = await fetch('http://127.0.0.1:8000/api/generate-questions', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
+    'Authorization': `Bearer ${access_token}`
   },
   body: JSON.stringify({
     topic: 'Mathematics',
@@ -199,7 +364,7 @@ const response = await fetch('http://127.0.0.1:8000/api/generate-questions', {
   })
 });
 
-const data = await response.json();
+const data = await questionsResponse.json();
 console.log(data.questions);
 ```
 
@@ -231,6 +396,8 @@ backend/
 | Variable | Description | Required | Default |
 |----------|-------------|----------|---------|
 | `GOOGLE_API_KEY` | Google Gemini API key | Yes | None |
+| `DATABASE_URL` | MySQL database connection string | Yes | mysql+mysqlconnector://root:password@localhost:3306/question_generator |
+| `SECRET_KEY` | JWT token secret key | Yes | None |
 
 ### API Limits
 
