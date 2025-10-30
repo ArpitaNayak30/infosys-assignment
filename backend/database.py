@@ -1,6 +1,6 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Text, Float, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
 import os
 from dotenv import load_dotenv
@@ -32,6 +32,28 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship to quiz attempts
+    quiz_attempts = relationship("QuizAttempt", back_populates="user")
+
+# Quiz Attempt model
+class QuizAttempt(Base):
+    __tablename__ = "quiz_attempts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    topic = Column(String(200), nullable=False)
+    total_questions = Column(Integer, nullable=False)
+    questions_data = Column(Text, nullable=False)  # JSON string of questions
+    answers = Column(Text, nullable=True)  # JSON string of user answers
+    score = Column(Integer, nullable=True)
+    percentage = Column(Float, nullable=True)
+    status = Column(String(20), default="incomplete")  # incomplete, completed
+    created_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+    
+    # Relationship to user
+    user = relationship("User", back_populates="quiz_attempts")
 
 # Create tables
 def create_tables():

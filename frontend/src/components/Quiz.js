@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import './Quiz.css';
 
-const Quiz = ({ questions, topic, onBackToForm }) => {
+const Quiz = ({ questions, topic, onBackToForm, onBackToDashboard }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
   const [score, setScore] = useState(0);
+  const [quizAttemptId, setQuizAttemptId] = useState(null);
+  
+  const { token } = useAuth();
 
   const handleAnswerSelect = (questionIndex, selectedOption) => {
     setSelectedAnswers({
@@ -28,17 +32,83 @@ const Quiz = ({ questions, topic, onBackToForm }) => {
     }
   };
 
-  const calculateResults = () => {
+  // Start quiz attempt when component mounts
+  useEffect(() => {
+    startQuizAttempt();
+  }, []);
+
+  const startQuizAttempt = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/quiz/start', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          topic: topic,
+          total_questions: questions.length,
+          questions_data: questions,
+          status: 'incomplete'
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setQuizAttemptId(data.id);
+      }
+    } catch (error) {
+      console.error('Failed to start quiz attempt:', error);
+    }
+  };
+
+  const calculateResults = async () => {
     let correctAnswers = 0;
+    const userAnswers = [];
+    
     questions.forEach((question, index) => {
       // For demo purposes, we'll assume option C is correct
       // In a real scenario, the API should provide the correct answer
       const correctOption = question.options[2]; // Assuming C is correct
-      if (selectedAnswers[index] === correctOption) {
+      const userAnswer = selectedAnswers[index];
+      const isCorrect = userAnswer === correctOption;
+      
+      if (isCorrect) {
         correctAnswers++;
       }
+      
+      userAnswers.push({
+        question_index: index,
+        question: question.question,
+        user_answer: userAnswer,
+        correct_answer: correctOption,
+        is_correct: isCorrect
+      });
     });
+    
     setScore(correctAnswers);
+    
+    // Complete the quiz attempt in backend
+    if (quizAttemptId) {
+      try {
+        await fetch(`http://127.0.0.1:8000/api/quiz/${quizAttemptId}/complete`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            answers: userAnswers,
+            score: correctAnswers,
+            total_questions: questions.length,
+            status: 'completed'
+          })
+        });
+      } catch (error) {
+        console.error('Failed to complete quiz attempt:', error);
+      }
+    }
+    
     setShowResults(true);
   };
 
@@ -96,6 +166,9 @@ const Quiz = ({ questions, topic, onBackToForm }) => {
             </button>
             <button onClick={onBackToForm} className="new-quiz-btn">
               Generate New Quiz
+            </button>
+            <button onClick={onBackToDashboard} className="dashboard-btn">
+              Back to Dashboard
             </button>
           </div>
         </div>

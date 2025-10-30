@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import './QuestionForm.css';
 
-const QuestionForm = ({ onQuestionsGenerated }) => {
+const QuestionForm = ({ onQuestionsGenerated, onBackToDashboard }) => {
   const [topic, setTopic] = useState('');
   const [numberQuestions, setNumberQuestions] = useState(5);
   const [loading, setLoading] = useState(false);
@@ -55,6 +55,11 @@ const QuestionForm = ({ onQuestionsGenerated }) => {
   return (
     <div className="question-form-container">
       <div className="question-form">
+        <div className="form-header">
+          <button onClick={onBackToDashboard} className="back-btn">
+            ← Back to Dashboard
+          </button>
+        </div>
         <h1>AI Question Generator</h1>
         <p>Generate quiz questions on any topic using AI</p>
         

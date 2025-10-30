@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Login from './Login';
 import Register from './Register';
 import Header from './Header';
+import Dashboard from './Dashboard';
 import QuestionForm from './QuestionForm';
 import Quiz from './Quiz';
 
@@ -11,18 +12,28 @@ const AuthWrapper = () => {
   const [showRegister, setShowRegister] = useState(false);
   const [questions, setQuestions] = useState([]);
   const [topic, setTopic] = useState('');
-  const [showQuiz, setShowQuiz] = useState(false);
+  const [currentView, setCurrentView] = useState('dashboard'); // dashboard, quiz-form, quiz
 
   const handleQuestionsGenerated = (generatedQuestions, selectedTopic) => {
     setQuestions(generatedQuestions);
     setTopic(selectedTopic);
-    setShowQuiz(true);
+    setCurrentView('quiz');
   };
 
   const handleBackToForm = () => {
-    setShowQuiz(false);
+    setCurrentView('quiz-form');
     setQuestions([]);
     setTopic('');
+  };
+
+  const handleBackToDashboard = () => {
+    setCurrentView('dashboard');
+    setQuestions([]);
+    setTopic('');
+  };
+
+  const handleNavigateToQuiz = () => {
+    setCurrentView('quiz-form');
   };
 
   const handleSwitchToRegister = () => {
@@ -59,18 +70,32 @@ const AuthWrapper = () => {
     );
   }
 
+  const handleNavigate = (view) => {
+    setCurrentView(view);
+    setQuestions([]);
+    setTopic('');
+  };
+
   // Show main application if authenticated
   return (
     <div>
-      <Header />
-      {showQuiz ? (
+      <Header currentView={currentView} onNavigate={handleNavigate} />
+      {currentView === 'dashboard' && (
+        <Dashboard onNavigateToQuiz={handleNavigateToQuiz} />
+      )}
+      {currentView === 'quiz-form' && (
+        <QuestionForm 
+          onQuestionsGenerated={handleQuestionsGenerated}
+          onBackToDashboard={handleBackToDashboard}
+        />
+      )}
+      {currentView === 'quiz' && (
         <Quiz 
           questions={questions} 
           topic={topic} 
           onBackToForm={handleBackToForm}
+          onBackToDashboard={handleBackToDashboard}
         />
-      ) : (
-        <QuestionForm onQuestionsGenerated={handleQuestionsGenerated} />
       )}
     </div>
   );

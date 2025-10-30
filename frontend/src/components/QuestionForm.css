@@ -16,6 +16,28 @@
   max-width: 500px;
 }
 
+.form-header {
+  margin-bottom: 20px;
+}
+
+.back-btn {
+  background: none;
+  border: 2px solid #667eea;
+  color: #667eea;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+  background: #667eea;
+  color: white;
+  transform: translateY(-1px);
+}
+
 .question-form h1 {
   text-align: center;
   color: #333;

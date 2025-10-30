@@ -215,7 +215,7 @@
   flex-wrap: wrap;
 }
 
-.retry-btn, .new-quiz-btn {
+.retry-btn, .new-quiz-btn, .dashboard-btn {
   padding: 12px 24px;
   border: none;
   border-radius: 8px;
@@ -235,7 +235,12 @@
   color: white;
 }
 
-.retry-btn:hover, .new-quiz-btn:hover {
+.dashboard-btn {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.retry-btn:hover, .new-quiz-btn:hover, .dashboard-btn:hover {
   transform: translateY(-2px);
 }
 
