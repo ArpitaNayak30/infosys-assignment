@@ -8,8 +8,24 @@ const Quiz = ({ questions, topic, onBackToForm, onBackToDashboard }) => {
   const [showResults, setShowResults] = useState(false);
   const [score, setScore] = useState(0);
   const [quizAttemptId, setQuizAttemptId] = useState(null);
+  const [isRetake, setIsRetake] = useState(false);
   
   const { token } = useAuth();
+
+  // Save progress when user navigates away
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (quizAttemptId && !showResults) {
+        // Quiz is incomplete, it will remain in database as incomplete
+        console.log('Quiz left incomplete, ID:', quizAttemptId);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [quizAttemptId, showResults]);
 
   const handleAnswerSelect = (questionIndex, selectedOption) => {
     setSelectedAnswers({
@@ -32,35 +48,21 @@ const Quiz = ({ questions, topic, onBackToForm, onBackToDashboard }) => {
     }
   };
 
-  // Start quiz attempt when component mounts
+  // Handle quiz initialization (resuming only, no auto-creation)
   useEffect(() => {
-    startQuizAttempt();
+    const resumingId = localStorage.getItem('resumingQuizId');
+    if (resumingId) {
+      setQuizAttemptId(parseInt(resumingId));
+      localStorage.removeItem('resumingQuizId');
+      console.log('✅ Resuming existing quiz with ID:', resumingId);
+    } else {
+      console.log('🆕 New quiz started - will create quiz attempt only when completed');
+      // Don't create incomplete quiz automatically
+      // Only create when user completes the quiz
+    }
   }, []);
 
-  const startQuizAttempt = async () => {
-    try {
-      const response = await fetch('http://127.0.0.1:8000/api/quiz/start', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          topic: topic,
-          total_questions: questions.length,
-          questions_data: questions,
-          status: 'incomplete'
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setQuizAttemptId(data.id);
-      }
-    } catch (error) {
-      console.error('Failed to start quiz attempt:', error);
-    }
-  };
+  // Removed startQuizAttempt - we only create quiz when completed
 
   const calculateResults = async () => {
     let correctAnswers = 0;
@@ -88,9 +90,11 @@ const Quiz = ({ questions, topic, onBackToForm, onBackToDashboard }) => {
     
     setScore(correctAnswers);
     
-    // Complete the quiz attempt in backend
-    if (quizAttemptId) {
-      try {
+    // Save quiz attempt (create new or update existing)
+    try {
+      if (quizAttemptId) {
+        // Update existing quiz (from resume)
+        console.log('📝 Updating existing quiz attempt ID:', quizAttemptId);
         await fetch(`http://127.0.0.1:8000/api/quiz/${quizAttemptId}/complete`, {
           method: 'PUT',
           headers: {
@@ -104,9 +108,33 @@ const Quiz = ({ questions, topic, onBackToForm, onBackToDashboard }) => {
             status: 'completed'
           })
         });
-      } catch (error) {
-        console.error('Failed to complete quiz attempt:', error);
+        console.log('✅ Updated existing quiz to completed');
+      } else {
+        // Create new completed quiz (never create incomplete)
+        console.log('📝 Creating new completed quiz (no incomplete phase)');
+        const response = await fetch('http://127.0.0.1:8000/api/quiz/start', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            topic: topic,
+            total_questions: questions.length,
+            questions_data: questions,
+            answers: userAnswers,
+            score: correctAnswers,
+            status: 'completed'
+          })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('✅ Created new completed quiz with ID:', data.id);
+        }
       }
+    } catch (error) {
+      console.error('Failed to save quiz attempt:', error);
     }
     
     setShowResults(true);
@@ -117,6 +145,9 @@ const Quiz = ({ questions, topic, onBackToForm, onBackToDashboard }) => {
     setSelectedAnswers({});
     setShowResults(false);
     setScore(0);
+    setIsRetake(true);
+    // Don't create a new quiz attempt for retake - reuse the current one
+    console.log('🔄 Retaking quiz - reusing existing quiz attempt ID:', quizAttemptId);
   };
 
   const getScoreColor = () => {

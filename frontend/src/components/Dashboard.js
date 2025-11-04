@@ -17,7 +17,7 @@ import {
 } from 'recharts';
 import './Dashboard.css';
 
-const Dashboard = ({ onNavigateToQuiz }) => {
+const Dashboard = ({ onNavigateToQuiz, onResumeQuiz }) => {
   const [stats, setStats] = useState(null);
   const [recentQuizzes, setRecentQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -90,13 +90,64 @@ const Dashboard = ({ onNavigateToQuiz }) => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      // Parse the date string - handle both UTC and local formats
+      let date;
+      
+      if (dateString.includes('T')) {
+        // ISO format (e.g., "2025-11-03T17:29:12.085986")
+        date = new Date(dateString);
+      } else {
+        // Other formats
+        date = new Date(dateString);
+      }
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date string:', dateString);
+        return 'Invalid Date';
+      }
+      
+      // Get current date and time
+      const now = new Date();
+      
+      // Calculate time difference
+      const diffMs = now.getTime() - date.getTime();
+      const diffMinutes = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      // Format based on how recent it is
+      if (diffMinutes < 1) {
+        return 'Just now';
+      } else if (diffMinutes < 60) {
+        return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
+      } else if (diffHours < 24) {
+        return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+      } else if (diffDays === 1) {
+        return `Yesterday at ${date.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })}`;
+      } else if (diffDays < 7) {
+        return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+      } else {
+        // For older dates, show full date and time
+        return date.toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+      }
+      
+    } catch (error) {
+      console.error('Date formatting error:', error, 'for date:', dateString);
+      return 'Invalid Date';
+    }
   };
 
   const getStatusColor = (status) => {
@@ -107,6 +158,100 @@ const Dashboard = ({ onNavigateToQuiz }) => {
     if (percentage >= 80) return '#28a745';
     if (percentage >= 60) return '#ffc107';
     return '#dc3545';
+  };
+
+  const handleResumeQuiz = async (quizId) => {
+    try {
+      console.log('=== RESUME QUIZ DEBUG ===');
+      console.log('Quiz ID:', quizId);
+      console.log('Token exists:', !!token);
+      console.log('Token preview:', token ? token.substring(0, 20) + '...' : 'No token');
+      console.log('API URL:', `http://127.0.0.1:8000/api/quiz/${quizId}`);
+      
+      if (!token) {
+        alert('Authentication token missing. Please logout and login again.');
+        return;
+      }
+      
+      const response = await fetch(`http://127.0.0.1:8000/api/quiz/${quizId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('Response status:', response.status);
+
+      if (response.status === 401) {
+        alert('Authentication failed. Please logout and login again.');
+        return;
+      }
+
+      if (response.ok) {
+        const quizData = await response.json();
+        console.log('=== FULL QUIZ DATA ===');
+        console.log('Complete response:', JSON.stringify(quizData, null, 2));
+        console.log('questions_data field:', quizData.questions_data);
+        console.log('questions_data type:', typeof quizData.questions_data);
+        console.log('questions_data length:', quizData.questions_data ? quizData.questions_data.length : 'null');
+        
+        if (quizData.questions_data) {
+          try {
+            console.log('Raw questions_data:', quizData.questions_data);
+            console.log('Type of questions_data:', typeof quizData.questions_data);
+            
+            let questions;
+            
+            // Handle different data types
+            if (typeof quizData.questions_data === 'string') {
+              if (quizData.questions_data === 'undefined' || quizData.questions_data === 'null' || quizData.questions_data.trim() === '') {
+                throw new Error('questions_data contains invalid value: ' + quizData.questions_data);
+              }
+              questions = JSON.parse(quizData.questions_data);
+            } else if (Array.isArray(quizData.questions_data)) {
+              questions = quizData.questions_data;
+            } else {
+              throw new Error('questions_data is not a string or array');
+            }
+            
+            console.log('Parsed questions count:', questions.length);
+            console.log('First question:', questions[0]);
+            
+            if (!questions || questions.length === 0) {
+              throw new Error('No questions found in quiz data');
+            }
+            
+            console.log('Calling onResumeQuiz with:', {
+              questionsCount: questions.length,
+              topic: quizData.topic,
+              quizId: quizId
+            });
+            
+            onResumeQuiz(questions, quizData.topic, quizId);
+            
+          } catch (parseError) {
+            console.error('Failed to parse questions_data:', parseError);
+            console.log('Raw questions_data value:', quizData.questions_data);
+            alert(`Cannot resume quiz: Invalid question data. Error: ${parseError.message}`);
+          }
+        } else {
+          console.error('No questions_data in response');
+          alert('Cannot resume quiz: No question data found');
+        }
+      } else {
+        const errorText = await response.text();
+        console.error('API Error:', response.status, errorText);
+        
+        if (response.status === 404) {
+          alert('Quiz not found. It may have been deleted.');
+        } else {
+          alert(`Failed to resume quiz: ${response.status} - ${errorText}`);
+        }
+      }
+    } catch (error) {
+      console.error('Network/JS Error:', error);
+      alert(`Error resuming quiz: ${error.message}`);
+    }
   };
 
   // Prepare chart data
@@ -281,6 +426,7 @@ const Dashboard = ({ onNavigateToQuiz }) => {
               <div>Percentage</div>
               <div>Status</div>
               <div>Date</div>
+              <div>Action</div>
             </div>
             {recentQuizzes.map((quiz) => (
               <div key={quiz.id} className="table-row">
@@ -315,6 +461,21 @@ const Dashboard = ({ onNavigateToQuiz }) => {
                 </div>
                 <div className="quiz-date">
                   {formatDate(quiz.created_at)}
+                </div>
+                <div className="quiz-action">
+                  {quiz.status === 'incomplete' ? (
+                    <button 
+                      onClick={() => {
+                        console.log('Resume button clicked for quiz ID:', quiz.id);
+                        handleResumeQuiz(quiz.id);
+                      }}
+                      className="resume-btn"
+                    >
+                      Resume
+                    </button>
+                  ) : (
+                    <span className="completed-text">✓ Done</span>
+                  )}
                 </div>
               </div>
             ))}

@@ -69,8 +69,38 @@ def test_quiz():
         db = SessionLocal()
         # Try to query the quiz_attempts table
         count = db.query(QuizAttempt).count()
+        
+        # Get some sample data
+        recent_quizzes = db.query(QuizAttempt).limit(3).all()
+        quiz_info = []
+        for quiz in recent_quizzes:
+            # Check if questions_data is valid
+            questions_valid = False
+            questions_preview = "None"
+            if quiz.questions_data:
+                try:
+                    import json
+                    parsed = json.loads(quiz.questions_data)
+                    questions_valid = True
+                    questions_preview = f"{len(parsed)} questions"
+                except:
+                    questions_preview = f"Invalid JSON: {quiz.questions_data[:50]}..."
+            
+            quiz_info.append({
+                "id": quiz.id,
+                "topic": quiz.topic,
+                "status": quiz.status,
+                "questions_valid": questions_valid,
+                "questions_preview": questions_preview,
+                "created_at": str(quiz.created_at)
+            })
+        
         db.close()
-        return {"message": "Quiz database working", "quiz_attempts_count": count}
+        return {
+            "message": "Quiz database working", 
+            "quiz_attempts_count": count,
+            "recent_quizzes": quiz_info
+        }
     except Exception as e:
         return {"message": "Quiz database error", "error": str(e)}
     

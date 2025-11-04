@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 from fastapi import HTTPException, status, Depends
 from sqlalchemy.orm import Session
@@ -10,7 +10,8 @@ from quiz_models import (
     QuizAttemptUpdate, 
     QuizAttemptResponse, 
     QuizStatsResponse,
-    RecentQuizResponse
+    RecentQuizResponse,
+    QuizStatus
 )
 
 class QuizController:
@@ -23,12 +24,24 @@ class QuizController:
     ) -> QuizAttemptResponse:
         """Create a new quiz attempt"""
         try:
+            # Calculate percentage if score is provided
+            percentage = None
+            completed_at = None
+            
+            if quiz_data.score is not None and quiz_data.status == QuizStatus.COMPLETED:
+                percentage = (quiz_data.score / quiz_data.total_questions) * 100
+                completed_at = datetime.now(timezone.utc)
+            
             quiz_attempt = QuizAttempt(
                 user_id=current_user.id,
                 topic=quiz_data.topic,
                 total_questions=quiz_data.total_questions,
                 questions_data=json.dumps(quiz_data.questions_data),
-                status=quiz_data.status.value
+                answers=json.dumps(quiz_data.answers) if quiz_data.answers else None,
+                score=quiz_data.score,
+                percentage=percentage,
+                status=quiz_data.status.value,
+                completed_at=completed_at
             )
             
             db.add(quiz_attempt)
@@ -72,7 +85,7 @@ class QuizController:
             quiz_attempt.score = quiz_update.score
             quiz_attempt.percentage = percentage
             quiz_attempt.status = quiz_update.status.value
-            quiz_attempt.completed_at = datetime.utcnow()
+            quiz_attempt.completed_at = datetime.now(timezone.utc)
             
             db.commit()
             db.refresh(quiz_attempt)

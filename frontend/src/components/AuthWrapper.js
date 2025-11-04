@@ -21,19 +21,47 @@ const AuthWrapper = () => {
   };
 
   const handleBackToForm = () => {
+    console.log('🔙 Going back to form - clearing quiz data');
     setCurrentView('quiz-form');
     setQuestions([]);
     setTopic('');
+    // Clear any resuming quiz ID to ensure fresh start
+    localStorage.removeItem('resumingQuizId');
   };
 
   const handleBackToDashboard = () => {
+    console.log('🔙 Going back to dashboard - clearing quiz data');
     setCurrentView('dashboard');
     setQuestions([]);
     setTopic('');
+    // Clear any resuming quiz ID
+    localStorage.removeItem('resumingQuizId');
   };
 
   const handleNavigateToQuiz = () => {
     setCurrentView('quiz-form');
+  };
+
+  const handleResumeQuiz = (quizQuestions, quizTopic, quizId) => {
+    console.log('=== AUTHWRAPPER RESUME ===');
+    console.log('Questions received:', quizQuestions?.length || 'undefined');
+    console.log('Topic:', quizTopic);
+    console.log('Quiz ID:', quizId);
+    
+    if (!quizQuestions || quizQuestions.length === 0) {
+      console.error('No questions provided to resume quiz');
+      alert('Error: No questions found for this quiz');
+      return;
+    }
+    
+    setQuestions(quizQuestions);
+    setTopic(quizTopic);
+    localStorage.setItem('resumingQuizId', quizId.toString());
+    
+    console.log('Setting current view to quiz...');
+    setCurrentView('quiz');
+    
+    console.log('AuthWrapper: Successfully set up resume quiz');
   };
 
   const handleSwitchToRegister = () => {
@@ -81,7 +109,10 @@ const AuthWrapper = () => {
     <div>
       <Header currentView={currentView} onNavigate={handleNavigate} />
       {currentView === 'dashboard' && (
-        <Dashboard onNavigateToQuiz={handleNavigateToQuiz} />
+        <Dashboard 
+          onNavigateToQuiz={handleNavigateToQuiz} 
+          onResumeQuiz={handleResumeQuiz}
+        />
       )}
       {currentView === 'quiz-form' && (
         <QuestionForm 

@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Text, Float, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 from dotenv import load_dotenv
 
@@ -30,8 +30,8 @@ class User(Base):
     email = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
     # Relationship to quiz attempts
     quiz_attempts = relationship("QuizAttempt", back_populates="user")
@@ -49,7 +49,7 @@ class QuizAttempt(Base):
     score = Column(Integer, nullable=True)
     percentage = Column(Float, nullable=True)
     status = Column(String(20), default="incomplete")  # incomplete, completed
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     completed_at = Column(DateTime, nullable=True)
     
     # Relationship to user

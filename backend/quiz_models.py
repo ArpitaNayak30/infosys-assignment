@@ -12,6 +12,9 @@ class QuizAttemptCreate(BaseModel):
     total_questions: int
     questions_data: List[dict]  # Store the questions and options
     status: QuizStatus = QuizStatus.INCOMPLETE
+    # Optional fields for completed quizzes
+    answers: Optional[List[dict]] = None
+    score: Optional[int] = None
 
 class QuizAttemptUpdate(BaseModel):
     answers: List[dict]  # User's answers
@@ -24,6 +27,8 @@ class QuizAttemptResponse(BaseModel):
     user_id: int
     topic: str
     total_questions: int
+    questions_data: Optional[str] = None  # Add this field!
+    answers: Optional[str] = None
     score: Optional[int] = None
     percentage: Optional[float] = None
     status: QuizStatus
